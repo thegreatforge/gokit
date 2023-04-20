@@ -1,4 +1,4 @@
-module github.com/forgedbuild/gowrappers/logger
+module github.com/thegreatforge/gowrappers/logger
 
 go 1.20
 
