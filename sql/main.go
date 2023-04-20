@@ -31,7 +31,10 @@ type Config struct {
 }
 
 // NewConfig creates a new config for the sql connection
-func NewConfig(name string, sqldriver Driver, host string, port int, user string, password string, dbname string, logger *zap.Logger) Config {
+func NewConfig(name string, sqldriver Driver,
+	host string, port int, user string, password string, dbname string,
+	logger *zap.Logger) Config {
+
 	return Config{
 		Name:      name,
 		sqldriver: sqldriver,
@@ -57,6 +60,7 @@ func init() {
 	Databases = make(map[string]*Connection)
 }
 
+// driverConnectString returns the connection string for the sql driver
 func driverConnectString(config Config) string {
 	switch config.sqldriver {
 	case Postgres:
@@ -102,7 +106,7 @@ func (c *Connection) Close() error {
 	return c.Db.Close()
 }
 
-// Query executes a query on the database
+// Query executes a SELECT query on the database
 func (c *Connection) Query(ctx context.Context, query string, args ...interface{}) ([]map[string]interface{}, error) {
 	rows, err := c.Db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -156,4 +160,22 @@ func (c *Connection) Query(ctx context.Context, query string, args ...interface{
 	}
 
 	return results, nil
+}
+
+// Exec executes a query on the database
+// Mostly used for inserts, updates, and deletes
+// Returns the number of rows affected
+func (c *Connection) Exec(ctx context.Context, query string, args ...interface{}) (int64, error) {
+	result, err := c.Db.ExecContext(ctx, query, args...)
+	if err != nil {
+		c.Config.logger.Error("Error executing query", zap.Error(err))
+		return 0, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		c.Config.logger.Sugar().Warnf("Error getting rows affected - %s", err.Error())
+		return 0, nil
+	}
+	return rowsAffected, nil
 }
