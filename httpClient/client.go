@@ -126,7 +126,7 @@ func (c *Client) Post(ctx context.Context, req Request, resp *Response) error {
 				}
 				return nil
 			}
-
+			return nil
 		} else {
 			c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("request failed with status %d", httpResp.StatusCode)
 		}
@@ -179,7 +179,7 @@ func (c *Client) Get(ctx context.Context, req Request, resp *Response) error {
 				}
 				return nil
 			}
-
+			return nil
 		} else {
 			c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("request failed with status %d", httpResp.StatusCode)
 		}
@@ -237,7 +237,7 @@ func (c *Client) Put(ctx context.Context, req Request, resp *Response) error {
 				}
 				return nil
 			}
-
+			return nil
 		} else {
 			c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("request failed with status %d", httpResp.StatusCode)
 		}
@@ -290,7 +290,7 @@ func (c *Client) Delete(ctx context.Context, req Request, resp *Response) error 
 				}
 				return nil
 			}
-
+			return nil
 		} else {
 			c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("request failed with status %d", httpResp.StatusCode)
 		}
@@ -348,7 +348,7 @@ func (c *Client) Patch(ctx context.Context, req Request, resp *Response) error {
 				}
 				return nil
 			}
-
+			return nil
 		} else {
 			c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("request failed with status %d", httpResp.StatusCode)
 		}
