@@ -1,4 +1,4 @@
-module github.com/thegreatforge/sql
+module github.com/thegreatforge/gokit/sql
 
 go 1.20
 

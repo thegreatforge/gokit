@@ -1,2 +1,2 @@
-# gowrappers
-Golang wrappers of different clients like http, kafka etc
+# gokit
+This repository contains libraries that are useful for building golang services.

@@ -1,0 +1,22 @@
+{
+	"name": "Existing Docker Compose (Extend)",
+	"dockerComposeFile": [
+		"docker-compose.yml"
+	],
+	"service": "gokit",
+	"workspaceFolder": "/gokit",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"golang.go",
+				"trixnz.go-to-method",
+				"waderyan.gitblame",
+				"GitHub.copilot",
+				"esbenp.prettier-vscode",
+				"mhutchie.git-graph",
+				"Gruntfuggly.todo-tree"
+			]
+		}
+	},
+	"remoteUser": "root"
+}

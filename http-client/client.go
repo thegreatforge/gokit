@@ -1,4 +1,4 @@
-package httpClient
+package httpclient
 
 import (
 	"bytes"
@@ -31,23 +31,28 @@ func init() {
 	Clients = make(map[string]*Client)
 }
 
-// RegisterNewClient registers a new HTTP client with the given configuration
-func RegisterNewClient(host string, service string, remoteService string,
+// NewClient creates a new HTTP client with the given configuration
+func NewClient(host string, service string, remoteService string,
 	timeout time.Duration, retries int, retryInterval time.Duration,
-	logger *zap.Logger) {
+	logger *zap.Logger) *Client {
 	hcli := &Client{
 		client: &http.Client{
 			Timeout: timeout * time.Second,
 		},
 		retries:       retries,
-		retryInterval: retryInterval * time.Second,
+		retryInterval: retryInterval,
 		host:          host,
 		service:       service,
 		remoteService: remoteService,
 		logger:        logger,
 	}
-	Clients[service] = hcli
-	logger.Sugar().Infof("registered new http client for service %s", service)
+	return hcli
+}
+
+// RegisterClient registers a new HTTP client to global map
+func RegisterClient(cli *Client) {
+	Clients[cli.service] = cli
+	cli.logger.Sugar().Infof("registered new http client for service %s", cli.service)
 }
 
 // getRequestId returns the request id from the context
@@ -82,17 +87,32 @@ func readBody(httpResp *http.Response, respBody interface{}) error {
 	return nil
 }
 
+// Close closes the idle connections of the HTTP client
+func (c *Client) CloseIdleConnections() {
+	c.client.CloseIdleConnections()
+}
+
 // Post makes a HTTP POST request with the given request
 func (c *Client) Post(ctx context.Context, req Request, resp *Response) error {
+	var httpCtx context.Context
+	var cancel context.CancelFunc
+
+	if req.Timeout != 0 {
+		httpCtx, cancel = context.WithTimeout(ctx, req.Timeout)
+		defer cancel()
+	} else {
+		httpCtx = ctx
+	}
+
 	reqBody, err := prepareRequestBody(req.Body)
 	if err != nil {
 		return fmt.Errorf("error preparing request body: %s", err)
 	}
 
-	requestId := getRequestId(ctx)
+	requestId := getRequestId(httpCtx)
 	for i := 0; i <= c.retries; i++ {
 
-		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.host+req.Path, reqBody)
+		httpReq, err := http.NewRequestWithContext(httpCtx, http.MethodPost, c.host+req.Path, reqBody)
 		if err != nil {
 			return fmt.Errorf("error creating request: %s", err)
 		}
@@ -142,10 +162,20 @@ func (c *Client) Post(ctx context.Context, req Request, resp *Response) error {
 
 // Get makes a HTTP GET request with the given request
 func (c *Client) Get(ctx context.Context, req Request, resp *Response) error {
-	requestId := getRequestId(ctx)
+	var httpCtx context.Context
+	var cancel context.CancelFunc
+
+	if req.Timeout != 0 {
+		httpCtx, cancel = context.WithTimeout(ctx, req.Timeout)
+		defer cancel()
+	} else {
+		httpCtx = ctx
+	}
+
+	requestId := getRequestId(httpCtx)
 	for i := 0; i <= c.retries; i++ {
 
-		httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, c.host+req.Path, nil)
+		httpReq, err := http.NewRequestWithContext(httpCtx, http.MethodGet, c.host+req.Path, nil)
 		if err != nil {
 			return fmt.Errorf("error creating request: %s", err)
 		}
@@ -195,15 +225,25 @@ func (c *Client) Get(ctx context.Context, req Request, resp *Response) error {
 
 // Put makes a HTTP PUT request with the given request
 func (c *Client) Put(ctx context.Context, req Request, resp *Response) error {
+	var httpCtx context.Context
+	var cancel context.CancelFunc
+
+	if req.Timeout != 0 {
+		httpCtx, cancel = context.WithTimeout(ctx, req.Timeout)
+		defer cancel()
+	} else {
+		httpCtx = ctx
+	}
+
 	reqBody, err := prepareRequestBody(req.Body)
 	if err != nil {
 		return fmt.Errorf("error preparing request body: %s", err)
 	}
 
-	requestId := getRequestId(ctx)
+	requestId := getRequestId(httpCtx)
 	for i := 0; i <= c.retries; i++ {
 
-		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPut, c.host+req.Path, reqBody)
+		httpReq, err := http.NewRequestWithContext(httpCtx, http.MethodPut, c.host+req.Path, reqBody)
 		if err != nil {
 			return fmt.Errorf("error creating request: %s", err)
 		}
@@ -253,10 +293,20 @@ func (c *Client) Put(ctx context.Context, req Request, resp *Response) error {
 
 // Delete makes a HTTP DELETE request with the given request
 func (c *Client) Delete(ctx context.Context, req Request, resp *Response) error {
-	requestId := getRequestId(ctx)
+	var httpCtx context.Context
+	var cancel context.CancelFunc
+
+	if req.Timeout != 0 {
+		httpCtx, cancel = context.WithTimeout(ctx, req.Timeout)
+		defer cancel()
+	} else {
+		httpCtx = ctx
+	}
+
+	requestId := getRequestId(httpCtx)
 	for i := 0; i <= c.retries; i++ {
 
-		httpReq, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.host+req.Path, nil)
+		httpReq, err := http.NewRequestWithContext(httpCtx, http.MethodDelete, c.host+req.Path, nil)
 		if err != nil {
 			return fmt.Errorf("error creating request: %s", err)
 		}
@@ -306,6 +356,16 @@ func (c *Client) Delete(ctx context.Context, req Request, resp *Response) error 
 
 // Patch makes a HTTP PATCH request with the given request
 func (c *Client) Patch(ctx context.Context, req Request, resp *Response) error {
+	var httpCtx context.Context
+	var cancel context.CancelFunc
+
+	if req.Timeout != 0 {
+		httpCtx, cancel = context.WithTimeout(ctx, req.Timeout)
+		defer cancel()
+	} else {
+		httpCtx = ctx
+	}
+
 	reqBody, err := prepareRequestBody(req.Body)
 	if err != nil {
 		return fmt.Errorf("error preparing request body: %s", err)
@@ -314,7 +374,7 @@ func (c *Client) Patch(ctx context.Context, req Request, resp *Response) error {
 	requestId := getRequestId(ctx)
 	for i := 0; i <= c.retries; i++ {
 
-		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPatch, c.host+req.Path, reqBody)
+		httpReq, err := http.NewRequestWithContext(httpCtx, http.MethodPatch, c.host+req.Path, reqBody)
 		if err != nil {
 			return fmt.Errorf("error creating request: %s", err)
 		}

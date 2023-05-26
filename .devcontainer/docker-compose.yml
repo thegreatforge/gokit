@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  gokit:
+    build:
+      context: ../.
+      dockerfile: ./.devcontainer/devcontainer.Dockerfile
+    volumes:
+      - ../.:/gokit
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
