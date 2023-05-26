@@ -1,4 +1,4 @@
-module github.com/thegreatforge/gowrappers/logger
+module github.com/thegreatforge/gokit/logger
 
 go 1.20
 

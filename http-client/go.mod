@@ -1,4 +1,4 @@
-module github.com/thegreatforge/gorwappers
+module github.com/thegreatforge/gokit/http-client
 
 go 1.20
 
