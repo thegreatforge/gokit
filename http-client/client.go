@@ -32,6 +32,13 @@ func init() {
 }
 
 // NewClient creates a new HTTP client with the given configuration
+// host: host of the service
+// service: name of the service
+// remoteService: name of the remote service to be used in the header for tracing
+// timeout: timeout for the HTTP client
+// retries: number of retries for the HTTP request
+// retryInterval: interval between retries
+// logger: logger
 func NewClient(host string, service string, remoteService string,
 	timeout time.Duration, retries int, retryInterval time.Duration,
 	logger *zap.Logger) *Client {
@@ -56,10 +63,7 @@ func RegisterClient(cli *Client) {
 }
 
 // getRequestId returns the request id from the context
-func getRequestId(ctx context.Context, requestId string) string {
-	if requestId != "" {
-		return requestId
-	}
+func getRequestId(ctx context.Context) string {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
 		if len(md.Get(XRequestIdHeaderKey)) > 0 {
@@ -106,10 +110,10 @@ func (c *Client) makeHttpRequestWithRetries(
 	resp *Response,
 ) error {
 
-	httpCtx, cancel := overrideTimeOut(ctx, req.Timeout)
+	httpCtx, cancel := overrideTimeOut(ctx, req.OverrideTimeout)
 	defer cancel()
 
-	requestId := getRequestId(httpCtx, req.RequestId)
+	requestId := getRequestId(httpCtx)
 
 	var reqBody io.Reader
 	var err error
