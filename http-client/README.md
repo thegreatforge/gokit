@@ -2,7 +2,7 @@
 
 http-client package is http client wrapper which will reduces the boiler plate needed to
 marshall/un-marshall request/response bodies, retry the requests with timeouts and send headers like
-`x-request-id` and `remote-service` for tracing.
+`x-request-id` and `service` for tracing.
 
 ## Usage
 

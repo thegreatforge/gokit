@@ -167,7 +167,7 @@ func TestGetTimeoutOveride(t *testing.T) {
 		Request{
 			Path: "/api/resource",
 			// Override the timeout
-			Timeout: 5 * time.Second,
+			OverrideTimeout: 5 * time.Second,
 		},
 		resp)
 
