@@ -38,7 +38,7 @@ func init() {
 // host: host of the service
 // service: name of the service
 // remoteService: name of the remote service to be used in the header for tracing
-// timeout: timeout for the HTTP client
+// timeout: timeout for the HTTP client in seconds
 // retries: number of retries for the HTTP request
 // retryInterval: interval between retries
 // logger: logger
@@ -117,7 +117,7 @@ func readBody(httpResp *http.Response, respBody interface{}) error {
 // overrideTimeOut overrides the timeout of the context if the timeout is not 0
 func overrideTimeOut(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	if timeout != 0 {
-		return context.WithTimeout(ctx, timeout)
+		return context.WithTimeout(ctx, timeout * time.Second)
 	}
 	return ctx, func() {}
 }
