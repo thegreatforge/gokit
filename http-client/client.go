@@ -18,13 +18,15 @@ var Clients map[string]*Client
 
 // Client is a HTTP client with retry and timeout support
 type Client struct {
-	client        *http.Client
-	retries       int
-	retryInterval time.Duration
-	host          string
-	service       string
-	remoteService string
-	logger        *zap.Logger
+	client           *http.Client
+	retries          int
+	retryInterval    time.Duration
+	host             string
+	service          string
+	remoteService    string
+	logger           *zap.Logger
+	onRetry          OnRetryHook
+	onClientResponse OnClientResponseHook
 }
 
 func init() {
@@ -39,19 +41,24 @@ func init() {
 // retries: number of retries for the HTTP request
 // retryInterval: interval between retries
 // logger: logger
+// onRetry: function to be called on retry
+// onClientResponse: function to be called on http client response
 func NewClient(host string, service string, remoteService string,
 	timeout time.Duration, retries int, retryInterval time.Duration,
-	logger *zap.Logger) *Client {
+	logger *zap.Logger, onRetry OnRetryHook, onClientResponse OnClientResponseHook) *Client {
+
 	hcli := &Client{
 		client: &http.Client{
 			Timeout: timeout * time.Second,
 		},
-		retries:       retries,
-		retryInterval: retryInterval,
-		host:          host,
-		service:       service,
-		remoteService: remoteService,
-		logger:        logger,
+		retries:          retries,
+		retryInterval:    retryInterval,
+		host:             host,
+		service:          service,
+		remoteService:    remoteService,
+		logger:           logger,
+		onRetry:          onRetry,
+		onClientResponse: onClientResponse,
 	}
 	return hcli
 }
@@ -138,9 +145,18 @@ func (c *Client) makeHttpRequestWithRetries(
 			httpReq.Header.Set(k, v)
 		}
 
+		startTime := time.Now()
 		httpResp, err := c.client.Do(httpReq)
 		if err != nil {
 			c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("request failed with error: %s", err)
+		}
+		latency := time.Since(startTime)
+
+		if c.onClientResponse != nil {
+			err = c.onClientResponse(c.remoteService, req.Path, httpMethod, httpResp.StatusCode, latency)
+			if err != nil {
+				c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("request failed with error: %s", err)
+			}
 		}
 
 		if httpResp.StatusCode >= 200 && httpResp.StatusCode < 400 {
@@ -170,6 +186,12 @@ func (c *Client) makeHttpRequestWithRetries(
 		}
 
 		if i != c.retries {
+			if c.onRetry != nil {
+				err = c.onRetry(c.remoteService, req.Path, httpMethod)
+				if err != nil {
+					c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("error executing onRetry hook: %s", err)
+				}
+			}
 			c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Warnf("retrying in %s...", c.retryInterval)
 			time.Sleep(c.retryInterval)
 		}

@@ -7,8 +7,7 @@ import (
 
 // Monitor is an object that uses to set server monitor.
 type Monitor struct {
-	metricPath string
-	metrics    map[string]*Metric
+	metrics map[string]*Metric
 }
 
 var monitor *Monitor
@@ -18,8 +17,7 @@ var monitor *Monitor
 func GetMonitor() *Monitor {
 	if monitor == nil {
 		monitor = &Monitor{
-			metricPath: "/metrics",
-			metrics:    make(map[string]*Metric),
+			metrics: make(map[string]*Metric),
 		}
 	}
 	return monitor
@@ -31,12 +29,6 @@ func (m *Monitor) GetMetric(name string) *Metric {
 		return metric
 	}
 	return &Metric{}
-}
-
-// SetMetricPath set metricPath property. metricPath is used for Prometheus
-// to get gin server monitoring data.
-func (m *Monitor) SetMetricPath(path string) {
-	m.metricPath = path
 }
 
 // AddMetric add metric object to Monitor.
