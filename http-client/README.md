@@ -29,8 +29,20 @@ type RequestBody struct {
 }
 
 func main() {
+	config := ClientConfig{
+		Host:             "https://reqres.in",
+		Service:          "example",
+		RemoteService:    "example-service",
+		Timeout:          1 * time.Second,
+		Retries:          3,
+		RetryInterval:    5 * time.Second,
+		Logger:           zap.NewNop(),
+		OnRetry:          nil,
+		OnClientResponse: nil,
+	}
+
 	// create new client and register it to global variable
-	cli := httpclient.NewClient("https://reqres.in", "example", "example-service", 5, 3, 1, zap.NewNop(), nil, nil)
+	cli := httpclient.NewClient(config)
 	httpclient.RegisterClient(cli)
 
 	resp := &httpclient.Response{

@@ -19,11 +19,15 @@ type OnRetryHook func(string, string, string) error
 type OnClientResponseHook func(string, string, string, int, time.Duration) error
 
 // Request is the request model for the HTTP client
+// Path: the path of the request
+// Body: the body of the request
+// Headers: the headers of the request
+// OverrideTimeout: override the timeout of the client, it should be less than the client timeout
 type Request struct {
-	Path            string            // Path
-	Body            interface{}       // Body
-	Headers         map[string]string // Headers
-	OverrideTimeout time.Duration     // Override Timeout of the client in seconds
+	Path            string
+	Body            interface{}
+	Headers         map[string]string
+	OverrideTimeout time.Duration
 }
 
 // Response is the response model for the HTTP client
