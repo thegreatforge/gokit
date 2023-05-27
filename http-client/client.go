@@ -34,32 +34,44 @@ func init() {
 	Clients = make(map[string]*Client)
 }
 
+// ClientConfig is the configuration for the HTTP client
+// Host: the host of the service
+// Service: the name of the service
+// RemoteService: the name of the remote service
+// Timeout: the timeout for the HTTP request
+// Retries: the number of retries for the HTTP request
+// RetryInterval: the interval between retries
+// Logger: the logger
+// OnRetry: the hook to be called on retry
+// OnClientResponse: the hook to be called on client response
+type ClientConfig struct {
+	Host             string
+	Service          string
+	RemoteService    string
+	Timeout          time.Duration
+	Retries          int
+	RetryInterval    time.Duration
+	Logger           *zap.Logger
+	OnRetry          OnRetryHook
+	OnClientResponse OnClientResponseHook
+}
+
 // NewClient creates a new HTTP client with the given configuration
-// host: host of the service
-// service: name of the service
-// remoteService: name of the remote service to be used in the header for tracing
-// timeout: timeout for the HTTP client in seconds
-// retries: number of retries for the HTTP request
-// retryInterval: interval between retries
-// logger: logger
-// onRetry: function to be called on retry
-// onClientResponse: function to be called on http client response
-func NewClient(host string, service string, remoteService string,
-	timeout time.Duration, retries int, retryInterval time.Duration,
-	logger *zap.Logger, onRetry OnRetryHook, onClientResponse OnClientResponseHook) *Client {
+// config: ClientConfig
+func NewClient(config ClientConfig) *Client {
 
 	hcli := &Client{
 		client: &http.Client{
-			Timeout: timeout * time.Second,
+			Timeout: config.Timeout,
 		},
-		retries:          retries,
-		retryInterval:    retryInterval,
-		host:             host,
-		service:          service,
-		remoteService:    remoteService,
-		logger:           logger,
-		onRetry:          onRetry,
-		onClientResponse: onClientResponse,
+		retries:          config.Retries,
+		retryInterval:    config.RetryInterval,
+		host:             config.Host,
+		service:          config.Service,
+		remoteService:    config.RemoteService,
+		logger:           config.Logger,
+		onRetry:          config.OnRetry,
+		onClientResponse: config.OnClientResponse,
 	}
 	return hcli
 }
@@ -117,7 +129,7 @@ func readBody(httpResp *http.Response, respBody interface{}) error {
 // overrideTimeOut overrides the timeout of the context if the timeout is not 0
 func overrideTimeOut(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	if timeout != 0 {
-		return context.WithTimeout(ctx, timeout * time.Second)
+		return context.WithTimeout(ctx, timeout)
 	}
 	return ctx, func() {}
 }
@@ -172,30 +184,32 @@ func (c *Client) makeHttpRequestWithRetries(
 			}
 		}
 
-		if httpResp.StatusCode >= 200 && httpResp.StatusCode < 400 {
+		if httpResp != nil {
+			if httpResp.StatusCode >= 200 && httpResp.StatusCode < 400 {
 
-			if resp != nil {
-				err = readBody(httpResp, resp.Body)
-				if err != nil {
-					return fmt.Errorf("error reading response body: %s", err)
-				}
-				resp.StatusCode = httpResp.StatusCode
+				if resp != nil {
+					err = readBody(httpResp, resp.Body)
+					if err != nil {
+						return fmt.Errorf("error reading response body: %s", err)
+					}
+					resp.StatusCode = httpResp.StatusCode
 
-				if resp.Headers == nil {
-					resp.Headers = make(map[string]string, len(httpResp.Header))
-				}
+					if resp.Headers == nil {
+						resp.Headers = make(map[string]string, len(httpResp.Header))
+					}
 
-				for k, v := range httpResp.Header {
-					if len(v) > 0 {
-						resp.Headers[k] = v[0]
+					for k, v := range httpResp.Header {
+						if len(v) > 0 {
+							resp.Headers[k] = v[0]
+						}
 					}
 				}
+
+				return nil
+
+			} else {
+				c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("request failed with status %d", httpResp.StatusCode)
 			}
-
-			return nil
-
-		} else {
-			c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("request failed with status %d", httpResp.StatusCode)
 		}
 
 		if i != c.retries {
@@ -211,15 +225,17 @@ func (c *Client) makeHttpRequestWithRetries(
 
 		if c.retries == i {
 			c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("request failed after maximum %d retries", c.retries)
-			resp.StatusCode = httpResp.StatusCode
-			_ = readBody(httpResp, resp.Body)
+			if httpResp != nil {
+				resp.StatusCode = httpResp.StatusCode
+				_ = readBody(httpResp, resp.Body)
 
-			if resp.Headers == nil {
-				resp.Headers = make(map[string]string, len(httpResp.Header))
-			}
-			for k, v := range httpResp.Header {
-				if len(v) > 0 {
-					resp.Headers[k] = v[0]
+				if resp.Headers == nil {
+					resp.Headers = make(map[string]string, len(httpResp.Header))
+				}
+				for k, v := range httpResp.Header {
+					if len(v) > 0 {
+						resp.Headers[k] = v[0]
+					}
 				}
 			}
 		}

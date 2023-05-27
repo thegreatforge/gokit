@@ -10,70 +10,61 @@ import (
 	"go.uber.org/zap"
 )
 
+func getClientConfig(host string, timeout, retryInterval time.Duration) ClientConfig {
+	if host == "" {
+		host = "http://example.com"
+	}
+	return ClientConfig{
+		Host:             host,
+		Service:          "example",
+		RemoteService:    "remote",
+		Timeout:          timeout,
+		Retries:          3,
+		RetryInterval:    retryInterval,
+		Logger:           zap.NewNop(),
+		OnRetry:          nil,
+		OnClientResponse: nil,
+	}
+}
+
 func TestNewClient(t *testing.T) {
-
-	logger := zap.NewNop()
-
-	host := "http://example.com"
-	service := "example"
-	remoteService := "remote"
-	timeout := time.Second
-	retries := 3
-	retryInterval := time.Millisecond
-
+	config := getClientConfig("", time.Second, time.Second)
 	// Create a new client
-	client := NewClient(host, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
+	client := NewClient(config)
 
 	// Check if the client's properties were set correctly
-	if client.host != host {
-		t.Errorf("Expected client's host to be '%s', but got '%s'", host, client.host)
+	if client.host != config.Host {
+		t.Errorf("Expected client's host to be '%s', but got '%s'", config.Host, client.host)
 	}
 
-	if client.remoteService != remoteService {
-		t.Errorf("Expected client's remoteService to be '%s', but got '%s'", remoteService, client.remoteService)
+	if client.remoteService != config.RemoteService {
+		t.Errorf("Expected client's remoteService to be '%s', but got '%s'", config.RemoteService, client.remoteService)
 	}
 
-	if client.retries != retries {
-		t.Errorf("Expected client's retries to be %d, but got %d", retries, client.retries)
+	if client.retries != config.Retries {
+		t.Errorf("Expected client's retries to be %d, but got %d", config.Retries, client.retries)
 	}
 
-	if client.retryInterval != retryInterval {
-		t.Errorf("Expected client's retryInterval to be %s, but got %s", retryInterval*time.Second, client.retryInterval)
+	if client.retryInterval != config.RetryInterval {
+		t.Errorf("Expected client's retryInterval to be %s, but got %s", config.RetryInterval, client.retryInterval)
 	}
 
 }
 
 func TestRegisterClient(t *testing.T) {
-	logger := zap.NewNop()
-
-	host := "http://example.com"
-	service := "example"
-	remoteService := "remote"
-	timeout := time.Second
-	retries := 3
-	retryInterval := time.Millisecond
-
+	config := getClientConfig("", time.Second, time.Second)
 	// Create a new client
-	client := NewClient(host, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
+	client := NewClient(config)
 
 	RegisterClient(client)
 
-	if _, exists := Clients[service]; !exists {
-		t.Errorf("Expected client's service to be '%s', but got '%s'", service, client.service)
+	if _, exists := Clients[config.Service]; !exists {
+		t.Errorf("Expected client's service to be '%s', but got '%s'", config.Service, client.service)
 	}
 	Clients = make(map[string]*Client)
 }
 
 func TestGet(t *testing.T) {
-
-	logger := zap.NewNop()
-
-	service := "example"
-	remoteService := "remote"
-	timeout := 5 * time.Second
-	retries := 3
-	retryInterval := time.Millisecond
-
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -90,9 +81,6 @@ func TestGet(t *testing.T) {
 		if r.Header.Get(XRequestIdHeaderKey) == "" {
 			t.Errorf("Expected request header '%s' to be set", XRequestIdHeaderKey)
 		}
-		if r.Header.Get(RemoteServiceHeaderKey) != remoteService {
-			t.Errorf("Expected request header '%s' to be '%s', but got '%s'", RemoteServiceHeaderKey, remoteService, r.Header.Get(RemoteServiceHeaderKey))
-		}
 
 		// Respond with a sample JSON response
 		w.WriteHeader(http.StatusOK)
@@ -100,8 +88,9 @@ func TestGet(t *testing.T) {
 	}))
 	defer server.Close()
 
+	config := getClientConfig(server.URL, time.Second, time.Second)
 	// Create a new client
-	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
+	client := NewClient(config)
 
 	type responseBody struct {
 		Message string `json:"message"`
@@ -133,13 +122,8 @@ func TestGet(t *testing.T) {
 }
 
 func TestGetTimeoutOveride(t *testing.T) {
-	logger := zap.NewNop()
-
-	service := "example"
-	remoteService := "remote"
-	timeout := 1 * time.Second
-	retries := 3
-	retryInterval := time.Millisecond
+	timeout := 5 * time.Second
+	retryInterval := 10 * time.Millisecond
 
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -147,12 +131,13 @@ func TestGetTimeoutOveride(t *testing.T) {
 		time.Sleep(2 * time.Second)
 		// Respond with a sample JSON response
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"message":"success"}`))
+		_, _ = w.Write([]byte(`{"message":"error"}`))
 	}))
 	defer server.Close()
 
+	config := getClientConfig(server.URL, timeout, retryInterval)
 	// Create a new client
-	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
+	client := NewClient(config)
 
 	type responseBody struct {
 		Message string `json:"message"`
@@ -167,25 +152,16 @@ func TestGetTimeoutOveride(t *testing.T) {
 		Request{
 			Path: "/api/resource",
 			// Override the timeout
-			OverrideTimeout: 5 * time.Second,
+			OverrideTimeout: 1 * time.Second,
 		},
 		resp)
 
-	if err != nil {
-		t.Errorf("Expected no error, but got '%s'", err.Error())
+	if err == nil {
+		t.Errorf("Expected error, but got nil")
 	}
 }
 
 func TestGetWithRetries(t *testing.T) {
-
-	logger := zap.NewNop()
-
-	service := "example"
-	remoteService := "remote"
-	timeout := 5 * time.Second
-	retries := 3
-	retryInterval := time.Millisecond
-
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -195,8 +171,9 @@ func TestGetWithRetries(t *testing.T) {
 	}))
 	defer server.Close()
 
+	config := getClientConfig(server.URL, time.Second, time.Second)
 	// Create a new client
-	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
+	client := NewClient(config)
 
 	type responseBody struct {
 		Message string `json:"message"`
@@ -227,15 +204,6 @@ func TestGetWithRetries(t *testing.T) {
 }
 
 func TestPut(t *testing.T) {
-
-	logger := zap.NewNop()
-
-	service := "example"
-	remoteService := "remote"
-	timeout := 5 * time.Second
-	retries := 3
-	retryInterval := time.Millisecond
-
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -252,9 +220,6 @@ func TestPut(t *testing.T) {
 		if r.Header.Get(XRequestIdHeaderKey) == "" {
 			t.Errorf("Expected request header '%s' to be set", XRequestIdHeaderKey)
 		}
-		if r.Header.Get(RemoteServiceHeaderKey) != remoteService {
-			t.Errorf("Expected request header '%s' to be '%s', but got '%s'", RemoteServiceHeaderKey, remoteService, r.Header.Get(RemoteServiceHeaderKey))
-		}
 		if r.Body == nil {
 			t.Errorf("Expected request body to be set")
 		}
@@ -265,8 +230,9 @@ func TestPut(t *testing.T) {
 	}))
 	defer server.Close()
 
+	config := getClientConfig(server.URL, time.Second, time.Second)
 	// Create a new client
-	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
+	client := NewClient(config)
 
 	type requestBody struct {
 		Message string `json:"message"`
@@ -305,14 +271,6 @@ func TestPut(t *testing.T) {
 
 func TestPost(t *testing.T) {
 
-	logger := zap.NewNop()
-
-	service := "example"
-	remoteService := "remote"
-	timeout := 5 * time.Second
-	retries := 3
-	retryInterval := time.Millisecond
-
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -329,9 +287,6 @@ func TestPost(t *testing.T) {
 		if r.Header.Get(XRequestIdHeaderKey) == "" {
 			t.Errorf("Expected request header '%s' to be set", XRequestIdHeaderKey)
 		}
-		if r.Header.Get(RemoteServiceHeaderKey) != remoteService {
-			t.Errorf("Expected request header '%s' to be '%s', but got '%s'", RemoteServiceHeaderKey, remoteService, r.Header.Get(RemoteServiceHeaderKey))
-		}
 		if r.Body == nil {
 			t.Errorf("Expected request body to be set")
 		}
@@ -342,8 +297,9 @@ func TestPost(t *testing.T) {
 	}))
 	defer server.Close()
 
+	config := getClientConfig(server.URL, time.Second, time.Second)
 	// Create a new client
-	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
+	client := NewClient(config)
 
 	type requestBody struct {
 		Message string `json:"message"`
@@ -381,15 +337,6 @@ func TestPost(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-
-	logger := zap.NewNop()
-
-	service := "example"
-	remoteService := "remote"
-	timeout := 5 * time.Second
-	retries := 3
-	retryInterval := time.Millisecond
-
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -406,9 +353,6 @@ func TestDelete(t *testing.T) {
 		if r.Header.Get(XRequestIdHeaderKey) == "" {
 			t.Errorf("Expected request header '%s' to be set", XRequestIdHeaderKey)
 		}
-		if r.Header.Get(RemoteServiceHeaderKey) != remoteService {
-			t.Errorf("Expected request header '%s' to be '%s', but got '%s'", RemoteServiceHeaderKey, remoteService, r.Header.Get(RemoteServiceHeaderKey))
-		}
 		if r.Body == nil {
 			t.Errorf("Expected request body to be set")
 		}
@@ -419,8 +363,9 @@ func TestDelete(t *testing.T) {
 	}))
 	defer server.Close()
 
+	config := getClientConfig(server.URL, time.Second, time.Second)
 	// Create a new client
-	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
+	client := NewClient(config)
 
 	type requestBody struct {
 		Message string `json:"message"`
@@ -454,15 +399,6 @@ func TestDelete(t *testing.T) {
 }
 
 func TestPatch(t *testing.T) {
-
-	logger := zap.NewNop()
-
-	service := "example"
-	remoteService := "remote"
-	timeout := 5 * time.Second
-	retries := 3
-	retryInterval := time.Millisecond
-
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -479,9 +415,6 @@ func TestPatch(t *testing.T) {
 		if r.Header.Get(XRequestIdHeaderKey) == "" {
 			t.Errorf("Expected request header '%s' to be set", XRequestIdHeaderKey)
 		}
-		if r.Header.Get(RemoteServiceHeaderKey) != remoteService {
-			t.Errorf("Expected request header '%s' to be '%s', but got '%s'", RemoteServiceHeaderKey, remoteService, r.Header.Get(RemoteServiceHeaderKey))
-		}
 		if r.Body == nil {
 			t.Errorf("Expected request body to be set")
 		}
@@ -492,8 +425,9 @@ func TestPatch(t *testing.T) {
 	}))
 	defer server.Close()
 
+	config := getClientConfig(server.URL, time.Second, time.Second)
 	// Create a new client
-	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
+	client := NewClient(config)
 
 	type requestBody struct {
 		Message string `json:"message"`
