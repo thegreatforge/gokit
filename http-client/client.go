@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
@@ -71,12 +72,24 @@ func RegisterClient(cli *Client) {
 
 // getRequestId returns the request id from the context
 func getRequestId(ctx context.Context) string {
+	if ctx == nil {
+		return uuid.New().String()
+	}
+
+	ginCtx, ok := ctx.(*gin.Context)
+	if ok {
+		if ginCtx.GetHeader(XRequestIdHeaderKey) != "" {
+			return ginCtx.GetHeader(XRequestIdHeaderKey)
+		}
+	}
+
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
 		if len(md.Get(XRequestIdHeaderKey)) > 0 {
 			return md.Get(XRequestIdHeaderKey)[0]
 		}
 	}
+
 	return uuid.New().String()
 }
 
