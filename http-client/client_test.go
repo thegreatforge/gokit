@@ -22,7 +22,7 @@ func TestNewClient(t *testing.T) {
 	retryInterval := time.Millisecond
 
 	// Create a new client
-	client := NewClient(host, service, remoteService, timeout, retries, retryInterval, logger)
+	client := NewClient(host, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
 
 	// Check if the client's properties were set correctly
 	if client.host != host {
@@ -54,7 +54,7 @@ func TestRegisterClient(t *testing.T) {
 	retryInterval := time.Millisecond
 
 	// Create a new client
-	client := NewClient(host, service, remoteService, timeout, retries, retryInterval, logger)
+	client := NewClient(host, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
 
 	RegisterClient(client)
 
@@ -101,7 +101,7 @@ func TestGet(t *testing.T) {
 	defer server.Close()
 
 	// Create a new client
-	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger)
+	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
 
 	type responseBody struct {
 		Message string `json:"message"`
@@ -152,7 +152,7 @@ func TestGetTimeoutOveride(t *testing.T) {
 	defer server.Close()
 
 	// Create a new client
-	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger)
+	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
 
 	type responseBody struct {
 		Message string `json:"message"`
@@ -196,7 +196,7 @@ func TestGetWithRetries(t *testing.T) {
 	defer server.Close()
 
 	// Create a new client
-	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger)
+	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
 
 	type responseBody struct {
 		Message string `json:"message"`
@@ -266,7 +266,7 @@ func TestPut(t *testing.T) {
 	defer server.Close()
 
 	// Create a new client
-	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger)
+	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
 
 	type requestBody struct {
 		Message string `json:"message"`
@@ -343,7 +343,7 @@ func TestPost(t *testing.T) {
 	defer server.Close()
 
 	// Create a new client
-	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger)
+	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
 
 	type requestBody struct {
 		Message string `json:"message"`
@@ -420,7 +420,7 @@ func TestDelete(t *testing.T) {
 	defer server.Close()
 
 	// Create a new client
-	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger)
+	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
 
 	type requestBody struct {
 		Message string `json:"message"`
@@ -493,7 +493,7 @@ func TestPatch(t *testing.T) {
 	defer server.Close()
 
 	// Create a new client
-	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger)
+	client := NewClient(server.URL, service, remoteService, timeout, retries, retryInterval, logger, nil, nil)
 
 	type requestBody struct {
 		Message string `json:"message"`

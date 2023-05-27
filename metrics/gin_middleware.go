@@ -14,10 +14,13 @@ var metricGinRequest string
 var metricGinRequestDuration string
 var labelGinRequestHeaderService string
 
+var ginMetricPath = "/metrics"
+
 // Use set gin metrics middleware
 // metricsPrefix: metrics prefix, will be used as metrics name prefix.
 // labelHeaderService: request header to identify remote service via label.
-func (m *Monitor) Use(r gin.IRoutes, metricsPrefix string, labelHeaderService string) error {
+// metricsRoute: metrics route, default is "/metrics".
+func (m *Monitor) Use(r gin.IRoutes, metricsPrefix, labelHeaderService, metricsRoute string) error {
 
 	if metricsPrefix == "" {
 		return fmt.Errorf("metricsPrefix can not be empty")
@@ -26,6 +29,8 @@ func (m *Monitor) Use(r gin.IRoutes, metricsPrefix string, labelHeaderService st
 	if labelHeaderService == "" {
 		return fmt.Errorf("labelHeaderService can not be empty")
 	}
+
+	ginMetricPath = metricsRoute
 
 	metricGinRequestTotal = fmt.Sprintf("%s_gin_request_total", metricsPrefix)
 	metricGinRequest = fmt.Sprintf("%s_gin_request", metricsPrefix)
@@ -67,7 +72,7 @@ func (m *Monitor) Use(r gin.IRoutes, metricsPrefix string, labelHeaderService st
 	}
 
 	r.Use(m.monitorInterceptor)
-	r.GET(m.metricPath, func(ctx *gin.Context) {
+	r.GET(ginMetricPath, func(ctx *gin.Context) {
 		promhttp.Handler().ServeHTTP(ctx.Writer, ctx.Request)
 	})
 
@@ -76,7 +81,7 @@ func (m *Monitor) Use(r gin.IRoutes, metricsPrefix string, labelHeaderService st
 
 // monitorInterceptor as gin monitor middleware.
 func (m *Monitor) monitorInterceptor(ctx *gin.Context) {
-	if ctx.Request.URL.Path == m.metricPath {
+	if ctx.Request.URL.Path == ginMetricPath {
 		ctx.Next()
 		return
 	}
