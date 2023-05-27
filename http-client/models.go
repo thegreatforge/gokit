@@ -23,7 +23,7 @@ type Request struct {
 	Path            string            // Path
 	Body            interface{}       // Body
 	Headers         map[string]string // Headers
-	OverrideTimeout time.Duration     // Override Timeout of the client
+	OverrideTimeout time.Duration     // Override Timeout of the client in seconds
 }
 
 // Response is the response model for the HTTP client
