@@ -11,7 +11,7 @@ import (
 
 var metricGinRequestTotal string
 var metricGinRequest string
-var metricGinRequestLatency string
+var metricGinRequestDuration string
 var labelGinRequestHeaderService string
 
 // Use set gin metrics middleware
@@ -29,7 +29,7 @@ func (m *Monitor) Use(r gin.IRoutes, metricsPrefix string, labelHeaderService st
 
 	metricGinRequestTotal = fmt.Sprintf("%s_gin_request_total", metricsPrefix)
 	metricGinRequest = fmt.Sprintf("%s_gin_request", metricsPrefix)
-	metricGinRequestLatency = fmt.Sprintf("%s_gin_request_latency", metricsPrefix)
+	metricGinRequestDuration = fmt.Sprintf("%s_gin_request_latency", metricsPrefix)
 	labelGinRequestHeaderService = labelHeaderService
 
 	err := m.AddMetric(&Metric{
@@ -48,6 +48,18 @@ func (m *Monitor) Use(r gin.IRoutes, metricsPrefix string, labelHeaderService st
 		Name:        metricGinRequest,
 		Description: "all the server received request num. with header label key, path, method and status code.",
 		Labels:      []string{"remote_service", "path", "method", "status_code"},
+	})
+
+	if err != nil {
+		return err
+	}
+
+	err = m.AddMetric(&Metric{
+		Type:        Histogram,
+		Name:        metricGinRequestDuration,
+		Description: "all the server received request latency. with header label key, path and method.",
+		Labels:      []string{"remote_service", "path", "method"},
+		Buckets:     []float64{0.1, 0.3, 0.5, 1.2},
 	})
 
 	if err != nil {
@@ -91,5 +103,5 @@ func (m *Monitor) ginMetricHandle(ctx *gin.Context, start time.Time) {
 	_ = m.GetMetric(metricGinRequest).Inc([]string{headerValue, ctx.FullPath(), r.Method, strconv.Itoa(w.Status())})
 
 	// set request latency
-	_ = m.GetMetric(metricGinRequestLatency).Observe([]string{headerValue, ctx.FullPath(), r.Method}, latency.Seconds())
+	_ = m.GetMetric(metricGinRequestDuration).Observe([]string{headerValue, ctx.FullPath(), r.Method}, latency.Seconds())
 }
