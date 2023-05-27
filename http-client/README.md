@@ -2,7 +2,7 @@
 
 http-client package is http client wrapper which will reduces the boiler plate needed to
 marshall/un-marshall request/response bodies, retry the requests with timeouts and send headers like
-`x-request-id` and `service` for tracing.
+`x-request-id` and `service` for tracing via logs.
 
 ## Usage
 
@@ -30,7 +30,7 @@ type RequestBody struct {
 
 func main() {
 	// create new client and register it to global variable
-	cli := httpclient.NewClient("https://reqres.in", "example", "example-service", 5, 3, 1, zap.NewNop())
+	cli := httpclient.NewClient("https://reqres.in", "example", "example-service", 5, 3, 1, zap.NewNop(), nil, nil)
 	httpclient.RegisterClient(cli)
 
 	resp := &httpclient.Response{

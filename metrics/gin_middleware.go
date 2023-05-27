@@ -34,7 +34,7 @@ func (m *Monitor) Use(r gin.IRoutes, metricsPrefix, labelHeaderService, metricsR
 
 	metricGinRequestTotal = fmt.Sprintf("%s_gin_request_total", metricsPrefix)
 	metricGinRequest = fmt.Sprintf("%s_gin_request", metricsPrefix)
-	metricGinRequestDuration = fmt.Sprintf("%s_gin_request_latency", metricsPrefix)
+	metricGinRequestDuration = fmt.Sprintf("%s_gin_request_duration", metricsPrefix)
 	labelGinRequestHeaderService = labelHeaderService
 
 	err := m.AddMetric(&Metric{
