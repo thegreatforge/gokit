@@ -225,7 +225,7 @@ func (c *Client) makeHttpRequestWithRetries(
 
 		if c.retries == i {
 			c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("request failed after maximum %d retries", c.retries)
-			if httpResp != nil {
+			if httpResp != nil && resp != nil {
 				resp.StatusCode = httpResp.StatusCode
 				_ = readBody(httpResp, resp.Body)
 
