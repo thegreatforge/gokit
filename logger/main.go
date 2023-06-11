@@ -12,24 +12,28 @@ func DefaultZapLogger() *zap.Logger {
 	return defaultLogger.zapLogger
 }
 
-// WithGinRequestId fetches GIN_REQUEST_ID_HEADER header from gin request and add it as field
-func (logger *Logger) WithGinRequestId(ctx *gin.Context) *Logger {
-	if ctx != nil {
-		requestId := ctx.Request.Header.Get(GIN_REQUEST_ID_HEADER)
-		return logger.WithField(GIN_REQUEST_ID_HEADER, requestId)
-	}
-	return logger.WithField(GIN_REQUEST_ID_HEADER, "")
-}
+// WithRequestId fetches GIN_REQUEST_ID_HEADER header from gin request
+// or GRPC_REQUEST_ID_HEADER header from grpc request and add it as field
+func (logger *Logger) WithRequestId(ctx context.Context) *Logger {
 
-// WithGrpcRequestId fetches GRPC_REQUEST_ID_HEADER header from grpc request and add it as field
-func (logger *Logger) WithGrpcRequestId(ctx context.Context) *Logger {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok {
-		if len(md.Get(GRPC_REQUEST_ID_HEADER)) > 0 {
-			return logger.WithField(GRPC_REQUEST_ID_HEADER, md.Get(GRPC_REQUEST_ID_HEADER)[0])
+	if ctx == nil {
+		return logger.WithField(REQUEST_ID_HEADER, "")
+	}
+
+	if ginCtx, ok := ctx.(*gin.Context); ok {
+		if ginCtx.Request.Header.Get(REQUEST_ID_HEADER) != "" {
+			return logger.WithField(REQUEST_ID_HEADER, ginCtx.Request.Header.Get(REQUEST_ID_HEADER))
 		}
 	}
-	return logger.WithField(GRPC_REQUEST_ID_HEADER, "")
+
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		if len(md.Get(REQUEST_ID_HEADER)) > 0 {
+			return logger.WithField(REQUEST_ID_HEADER, md.Get(REQUEST_ID_HEADER)[0])
+		}
+	}
+
+	return logger.WithField(REQUEST_ID_HEADER, "")
 }
 
 // WithError adds an error as single field to the Entry.
@@ -52,24 +56,28 @@ func (logger *Logger) WithField(key string, value interface{}) *Logger {
 	}
 }
 
-// WithGinRequestId fetches GIN_REQUEST_ID_HEADER header from gin request and add it as field
-func WithGinRequestId(ctx *gin.Context) *Logger {
-	if ctx != nil {
-		requestId := ctx.Request.Header.Get(GIN_REQUEST_ID_HEADER)
-		return defaultLogger.WithField(GIN_REQUEST_ID_HEADER, requestId)
-	}
-	return defaultLogger.WithField(GIN_REQUEST_ID_HEADER, "")
-}
+// WithRequestId fetches GIN_REQUEST_ID_HEADER header from gin request
+// or GRPC_REQUEST_ID_HEADER header from grpc request and add it as field
+func WithRequestId(ctx context.Context) *Logger {
 
-// WithGrpcRequestId fetches GRPC_REQUEST_ID_HEADER header from grpc request and add it as field
-func WithGrpcRequestId(ctx context.Context) *Logger {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok {
-		if len(md.Get(GRPC_REQUEST_ID_HEADER)) > 0 {
-			return defaultLogger.WithField(GRPC_REQUEST_ID_HEADER, md.Get(GRPC_REQUEST_ID_HEADER)[0])
+	if ctx == nil {
+		return defaultLogger.WithField(REQUEST_ID_HEADER, "")
+	}
+
+	if ginCtx, ok := ctx.(*gin.Context); ok {
+		if ginCtx.Request.Header.Get(REQUEST_ID_HEADER) != "" {
+			return defaultLogger.WithField(REQUEST_ID_HEADER, ginCtx.Request.Header.Get(REQUEST_ID_HEADER))
 		}
 	}
-	return defaultLogger.WithField(GRPC_REQUEST_ID_HEADER, "")
+
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		if len(md.Get(REQUEST_ID_HEADER)) > 0 {
+			return defaultLogger.WithField(REQUEST_ID_HEADER, md.Get(REQUEST_ID_HEADER)[0])
+		}
+	}
+
+	return defaultLogger.WithField(REQUEST_ID_HEADER, "")
 }
 
 // WithField creates an entry from the standard logger and adds a field to
