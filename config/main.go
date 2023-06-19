@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"os"
+	"path/filepath"
 
 	"github.com/thegreatforge/gokit/config/provider"
 	"go.uber.org/zap"
@@ -34,7 +35,7 @@ func Initialise(opts ...Option) error {
 	for _, provider := range initialisedApp.configProviders {
 		err := provider.LoadConfig(initialisedApp.data)
 		if err != nil {
-			initialisedApp.logger.Error("failed to load config from provider", zap.Error(err))
+			initialisedApp.logger.Error("failed to load config", zap.Error(err))
 			return err
 		}
 	}
@@ -55,7 +56,7 @@ func WithLogger(logger *zap.Logger) Option {
 	}
 }
 
-// WithFiles sets the files to load the config from
+// WithFiles sets the yaml / yml  / json files to load the config from
 // paths is a list of paths to load the config from
 func WithFiles(paths []string) Option {
 	return func(c *app) error {
@@ -69,6 +70,12 @@ func WithFiles(paths []string) Option {
 			if err != nil {
 				c.logger.Error("failed to load config file ", zap.String("path", path), zap.Error(err))
 				return err
+			}
+
+			ext := filepath.Ext(path)
+			if ext != ".yaml" && ext != ".yml" && ext != ".json" {
+				c.logger.Error("invalid config file extension", zap.String("path", path), zap.String("extension", ext))
+				return errors.New("invalid config file extension: " + ext)
 			}
 		}
 
