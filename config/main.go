@@ -21,8 +21,9 @@ var initialisedApp *app
 
 // Initialise initialises the config
 func Initialise(opts ...Option) error {
+	zl, _ := zap.NewDevelopment()
 	initialisedApp = &app{
-		logger: &zap.Logger{},
+		logger: zl,
 		data:   make(map[string]interface{}),
 	}
 
@@ -45,7 +46,7 @@ func Initialise(opts ...Option) error {
 
 // Close closes the config goroutines
 func Close() {
-	// TODO: implement
+	// TODO: implement if needed
 }
 
 // WithLogger sets the logger for the config
@@ -88,6 +89,90 @@ func WithFiles(paths []string) Option {
 // variables is a list of env variables to load the config from
 func WithEnvVariables(variables []string) Option {
 	return func(c *app) error {
+
+		if len(variables) == 0 {
+			c.logger.Error("no env variables provided")
+			return errors.New("no env variables provided")
+		}
+
+		c.configProviders = append(c.configProviders, provider.NewEnvProvider(variables))
 		return nil
 	}
+}
+
+// Get returns the config value for the given key
+func Get(key string) interface{} {
+	r, exists := initialisedApp.data[key]
+	if !exists {
+		return nil
+	}
+	return r
+}
+
+// GetBool returns the config value for the given key as a bool
+func GetBool(key string) bool {
+	r, exists := initialisedApp.data[key]
+	if !exists {
+		return false
+	}
+	return r.(bool)
+}
+
+// GetInt returns the config value for the given key as an int
+func GetInt(key string) int {
+	r, exists := initialisedApp.data[key]
+	if !exists {
+		return 0
+	}
+	return r.(int)
+}
+
+// GetUint returns the config value for the given key as a uint
+func GetUint(key string) uint {
+	r, exists := initialisedApp.data[key]
+	if !exists {
+		return 0
+	}
+	return r.(uint)
+}
+
+// GetFloat returns the config value for the given key as a float
+func GetFloat(key string) float64 {
+	r, exists := initialisedApp.data[key]
+	if !exists {
+		return 0
+	}
+	return r.(float64)
+}
+
+// GetString returns the config value for the given key as a string
+func GetString(key string) string {
+	r, exists := initialisedApp.data[key]
+	if !exists {
+		return ""
+	}
+	return r.(string)
+}
+
+// GetSlice returns the config value for the given key as a slice
+func GetSlice(key string) []interface{} {
+	r, exists := initialisedApp.data[key]
+	if !exists {
+		return nil
+	}
+	return r.([]interface{})
+}
+
+// GetMap returns the config value for the given key as a map
+func GetMap(key string) map[string]interface{} {
+	r, exists := initialisedApp.data[key]
+	if !exists {
+		return nil
+	}
+	return r.(map[string]interface{})
+}
+
+// GetAll returns all the config values
+func GetAll() map[string]interface{} {
+	return initialisedApp.data
 }

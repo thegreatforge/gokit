@@ -65,7 +65,7 @@ func (fp *fileProvider) LoadConfig(data map[string]interface{}) error {
 			return errors.New("config file data type not supported: " + ext)
 		}
 
-		// merge the data
+		// merge the data of all the files
 		for k, v := range exploded {
 			data[k] = v
 		}
@@ -82,16 +82,6 @@ func (fp *fileProvider) parseMap(input map[string]interface{}, parent string) (m
 			k = parent + fp.delimiter + k
 		}
 		switch v := i.(type) {
-		case nil:
-			result[k] = v
-		case int:
-			result[k] = v
-		case float64:
-			result[k] = v
-		case string:
-			result[k] = v
-		case bool:
-			result[k] = v
 		case []interface{}:
 			out, err := fp.parseSlice(v, k)
 			if err != nil {
@@ -100,6 +90,7 @@ func (fp *fileProvider) parseMap(input map[string]interface{}, parent string) (m
 			for key, value := range out {
 				result[key] = value
 			}
+			result[k] = v
 		case map[string]interface{}:
 			out, err := fp.parseMap(v, k)
 			if err != nil {
@@ -108,8 +99,9 @@ func (fp *fileProvider) parseMap(input map[string]interface{}, parent string) (m
 			for key, value := range out {
 				result[key] = value
 			}
+			result[k] = v
 		default:
-			//nothing
+			result[k] = v
 		}
 	}
 	return result, nil
@@ -131,16 +123,6 @@ func (fp *fileProvider) parseSlice(input []interface{}, parent string) (map[stri
 		}
 
 		switch v := i.(type) {
-		case nil:
-			result[key] = v
-		case int:
-			result[key] = v
-		case float64:
-			result[key] = v
-		case string:
-			result[key] = v
-		case bool:
-			result[key] = v
 		case []interface{}:
 			out, err := fp.parseSlice(v, key)
 			if err != nil {
@@ -149,6 +131,7 @@ func (fp *fileProvider) parseSlice(input []interface{}, parent string) (map[stri
 			for newkey, value := range out {
 				result[newkey] = value
 			}
+			result[key] = v
 		case map[string]interface{}:
 			out, err := fp.parseMap(v, key)
 			if err != nil {
@@ -157,8 +140,9 @@ func (fp *fileProvider) parseSlice(input []interface{}, parent string) (map[stri
 			for newkey, value := range out {
 				result[newkey] = value
 			}
+			result[key] = v
 		default:
-			// do nothing
+			result[key] = v
 		}
 	}
 	return result, nil
