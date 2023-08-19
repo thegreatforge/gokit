@@ -1,5 +1,5 @@
 package provider
 
-type Provider interface {
+type IProvider interface {
 	LoadConfig(data map[string]interface{}) error
 }
