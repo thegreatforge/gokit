@@ -18,7 +18,7 @@ To start using the `config` package, you need to initialize it with configuratio
 
 ```go
 import (
-	"github.com/yourusername/yourproject/config"
+	"github.com/thegreatforge/gokit/config"
 )
 
 func main() {
