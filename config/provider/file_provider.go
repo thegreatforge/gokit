@@ -2,10 +2,11 @@ package provider
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/thegreatforge/gokit/config/errors"
 
 	"gopkg.in/yaml.v3"
 )
@@ -15,7 +16,7 @@ type fileProvider struct {
 	delimiter string
 }
 
-func NewFileProvider(paths []string) Provider {
+func NewFileProvider(paths []string) IProvider {
 	return &fileProvider{
 		paths:     paths,
 		delimiter: ".",
@@ -28,7 +29,7 @@ func (fp *fileProvider) LoadConfig(data map[string]interface{}) error {
 
 		configFile, err := os.ReadFile(path)
 		if err != nil {
-			return errors.New("config file read failure: " + err.Error())
+			return err
 		}
 
 		ext := filepath.Ext(path)
@@ -36,17 +37,17 @@ func (fp *fileProvider) LoadConfig(data map[string]interface{}) error {
 		case ".yaml", ".yml":
 			err = yaml.Unmarshal(configFile, &configData)
 			if err != nil {
-				return errors.New("config file unmarshal failure: " + err.Error())
+				return err
 			}
 
 		case ".json":
 			err = json.Unmarshal(configFile, &configData)
 			if err != nil {
-				return errors.New("config file unmarshal failure: " + err.Error())
+				return err
 			}
 
 		default:
-			return errors.New("config file extension not supported: " + ext)
+			return errors.ErrConfigInvalidType
 		}
 
 		var exploded map[string]interface{}
@@ -62,7 +63,7 @@ func (fp *fileProvider) LoadConfig(data map[string]interface{}) error {
 				return err
 			}
 		default:
-			return errors.New("config file data type not supported: " + ext)
+			return errors.ErrConfigFileDataTypeNotSupported
 		}
 
 		// merge the data of all the files

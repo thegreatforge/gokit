@@ -1,18 +1,16 @@
 package config
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 
+	"github.com/thegreatforge/gokit/config/errors"
 	"github.com/thegreatforge/gokit/config/provider"
-	"go.uber.org/zap"
 )
 
 type app struct {
-	logger          *zap.Logger
 	data            map[string]interface{}
-	configProviders []provider.Provider
+	configProviders []provider.IProvider
 }
 
 type Option func(*app) error
@@ -21,10 +19,12 @@ var initialisedApp *app
 
 // Initialise initialises the config
 func Initialise(opts ...Option) error {
-	zl, _ := zap.NewDevelopment()
+	if len(opts) == 0 {
+		return errors.ErrNoConfigProviders
+	}
+
 	initialisedApp = &app{
-		logger: zl,
-		data:   make(map[string]interface{}),
+		data: make(map[string]interface{}),
 	}
 
 	for _, opt := range opts {
@@ -36,7 +36,6 @@ func Initialise(opts ...Option) error {
 	for _, provider := range initialisedApp.configProviders {
 		err := provider.LoadConfig(initialisedApp.data)
 		if err != nil {
-			initialisedApp.logger.Error("failed to load config", zap.Error(err))
 			return err
 		}
 	}
@@ -49,34 +48,23 @@ func Close() {
 	// TODO: implement if needed
 }
 
-// WithLogger sets the logger for the config
-func WithLogger(logger *zap.Logger) Option {
-	return func(c *app) error {
-		c.logger = logger
-		return nil
-	}
-}
-
 // WithFiles sets the yaml / yml  / json files to load the config from
 // paths is a list of paths to load the config from
-func WithFiles(paths []string) Option {
+func WithFiles(paths ...string) Option {
 	return func(c *app) error {
 		if len(paths) == 0 {
-			c.logger.Error("no config files provided")
-			return errors.New("no config files provided")
+			return errors.ErrNoConfigFiles
 		}
 
 		for _, path := range paths {
 			_, err := os.Stat(path)
 			if err != nil {
-				c.logger.Error("failed to load config file ", zap.String("path", path), zap.Error(err))
 				return err
 			}
 
 			ext := filepath.Ext(path)
 			if ext != ".yaml" && ext != ".yml" && ext != ".json" {
-				c.logger.Error("invalid config file extension", zap.String("path", path), zap.String("extension", ext))
-				return errors.New("invalid config file extension: " + ext)
+				return errors.ErrInvalidFileType
 			}
 		}
 
@@ -87,12 +75,11 @@ func WithFiles(paths []string) Option {
 
 // WithEnvVariables sets the env variables to load the config from
 // variables is a list of env variables to load the config from
-func WithEnvVariables(variables []string) Option {
+func WithEnvVariables(variables ...string) Option {
 	return func(c *app) error {
 
 		if len(variables) == 0 {
-			c.logger.Error("no env variables provided")
-			return errors.New("no env variables provided")
+			return errors.ErrNoEnvVariables
 		}
 
 		c.configProviders = append(c.configProviders, provider.NewEnvProvider(variables))
@@ -101,75 +88,135 @@ func WithEnvVariables(variables []string) Option {
 }
 
 // Get returns the config value for the given key
-func Get(key string) interface{} {
+func Get(key string) (interface{}, error) {
 	r, exists := initialisedApp.data[key]
 	if !exists {
-		return nil
+		return nil, errors.ErrConfigNotExists
 	}
-	return r
+	return r, nil
 }
 
 // GetBool returns the config value for the given key as a bool
-func GetBool(key string) bool {
+func GetBool(key string) (bool, error) {
 	r, exists := initialisedApp.data[key]
 	if !exists {
-		return false
+		return false, errors.ErrConfigNotExists
 	}
-	return r.(bool)
+	val, ok := r.(bool)
+	if !ok {
+		return false, errors.ErrConfigInvalidType
+	}
+	return val, nil
 }
 
 // GetInt returns the config value for the given key as an int
-func GetInt(key string) int {
+func GetInt(key string) (int, error) {
 	r, exists := initialisedApp.data[key]
 	if !exists {
-		return 0
+		return 0, errors.ErrConfigNotExists
 	}
-	return r.(int)
-}
-
-// GetUint returns the config value for the given key as a uint
-func GetUint(key string) uint {
-	r, exists := initialisedApp.data[key]
-	if !exists {
-		return 0
+	val, ok := r.(int)
+	if !ok {
+		return 0, errors.ErrConfigInvalidType
 	}
-	return r.(uint)
+	return val, nil
 }
 
 // GetFloat returns the config value for the given key as a float
-func GetFloat(key string) float64 {
+func GetFloat(key string) (float64, error) {
 	r, exists := initialisedApp.data[key]
 	if !exists {
-		return 0
+		return 0, errors.ErrConfigNotExists
 	}
-	return r.(float64)
+	val, ok := r.(float64)
+	if !ok {
+		return 0, errors.ErrConfigInvalidType
+	}
+	return val, nil
 }
 
 // GetString returns the config value for the given key as a string
-func GetString(key string) string {
+func GetString(key string) (string, error) {
 	r, exists := initialisedApp.data[key]
 	if !exists {
-		return ""
+		return "", errors.ErrConfigNotExists
 	}
-	return r.(string)
+	val, ok := r.(string)
+	if !ok {
+		return "", errors.ErrConfigInvalidType
+	}
+	return val, nil
 }
 
 // GetSlice returns the config value for the given key as a slice
-func GetSlice(key string) []interface{} {
+func GetSlice(key string) ([]interface{}, error) {
 	r, exists := initialisedApp.data[key]
 	if !exists {
-		return nil
+		return nil, errors.ErrConfigNotExists
 	}
-	return r.([]interface{})
+	val, ok := r.([]interface{})
+	if !ok {
+		return nil, errors.ErrConfigInvalidType
+	}
+	return val, nil
+}
+
+// GetStringSlice returns the config value for the given key as a string slice
+func GetStringSlice(key string) ([]string, error) {
+	r, exists := initialisedApp.data[key]
+	if !exists {
+		return nil, errors.ErrConfigNotExists
+	}
+
+	val, ok := r.([]interface{})
+	if !ok {
+		return nil, errors.ErrConfigInvalidType
+	}
+
+	var out []string
+	for _, v := range val {
+		val, ok := v.(string)
+		if !ok {
+			return nil, errors.ErrConfigInvalidType
+		}
+		out = append(out, val)
+	}
+	return out, nil
 }
 
 // GetMap returns the config value for the given key as a map
-func GetMap(key string) map[string]interface{} {
+func GetMap(key string) (map[string]interface{}, error) {
 	r, exists := initialisedApp.data[key]
 	if !exists {
-		return nil
+		return nil, errors.ErrConfigNotExists
 	}
-	return r.(map[string]interface{})
+	val, ok := r.(map[string]interface{})
+	if !ok {
+		return nil, errors.ErrConfigInvalidType
+	}
+	return val, nil
+}
+
+// GetStringMap returns the config value for the given key as a map[string]string
+func GetStringMap(key string) (map[string]string, error) {
+	r, exists := initialisedApp.data[key]
+	if !exists {
+		return nil, errors.ErrConfigNotExists
+	}
+	val, ok := r.(map[string]interface{})
+	if !ok {
+		return nil, errors.ErrConfigInvalidType
+	}
+
+	var out = make(map[string]string)
+	for k, v := range val {
+		val, ok := v.(string)
+		if !ok {
+			return nil, errors.ErrConfigInvalidType
+		}
+		out[k] = val
+	}
+	return out, nil
 }
 
 // GetAll returns all the config values

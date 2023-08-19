@@ -6,7 +6,7 @@ type envProvider struct {
 	variables []string
 }
 
-func NewEnvProvider(variables []string) Provider {
+func NewEnvProvider(variables []string) IProvider {
 	return &envProvider{
 		variables: variables,
 	}
