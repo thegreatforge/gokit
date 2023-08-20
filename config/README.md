@@ -53,6 +53,15 @@ stringMapValue, err := config.GetStringMap("string_map_key")
 allConfigValues := config.GetAll()
 ```
 
+### Reloading Config
+
+Once the configuration is initialized, and then changed, you can easily reload the configuration values.
+If there is an error in reloading, old values will still be applicable.
+
+```go
+err := config.Reload()
+```
+
 ### Configuration Sources
 
 The `config` package supports loading configuration from various sources:
