@@ -11,6 +11,7 @@ const (
 	ErrConfigInvalidType              Error = "config: invalid type"
 	ErrConfigFileDataTypeNotSupported Error = "config: config file data type not supported"
 	ErrNoConfigProviders              Error = "config: no config providers"
+	ErrConfigNotInitialised           Error = "config: config not initialised"
 )
 
 func (e Error) Error() string {

@@ -87,6 +87,26 @@ func WithEnvVariables(variables ...string) Option {
 	}
 }
 
+// Reload reloads the config from the config providers
+func Reload() error {
+	if initialisedApp == nil {
+		return errors.ErrConfigNotInitialised
+	}
+
+	newConfig := make(map[string]interface{})
+
+	for _, provider := range initialisedApp.configProviders {
+		err := provider.LoadConfig(newConfig)
+		if err != nil {
+			return err
+		}
+	}
+
+	initialisedApp.data = newConfig
+
+	return nil
+}
+
 // Get returns the config value for the given key
 func Get(key string) (interface{}, error) {
 	r, exists := initialisedApp.data[key]
