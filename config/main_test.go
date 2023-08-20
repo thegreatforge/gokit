@@ -195,3 +195,21 @@ func TestGetAll(t *testing.T) {
 	val := GetAll()
 	assert.Equal(t, map[string]interface{}{"test": "test"}, val)
 }
+
+func TestReload(t *testing.T) {
+
+	// create test file
+	os.WriteFile("test.yaml", []byte("test: test"), 0644)
+
+	// initialise config
+	assert.NoError(t, Initialise(WithFiles("test.yaml")))
+	os.Remove("test.yaml")
+
+	os.WriteFile("test.yaml", []byte("test: test-reloaded"), 0644)
+	defer os.Remove("test.yaml")
+
+	assert.NoError(t, Reload())
+	val, err := GetString("test")
+	assert.NoError(t, err)
+	assert.Equal(t, "test-reloaded", val)
+}
