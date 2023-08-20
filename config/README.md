@@ -74,10 +74,6 @@ The `config` package supports loading configuration from various sources:
 
 Contributions are welcome! If you find any issues, have suggestions, or want to add new features, feel free to open an issue or submit a pull request on the [GitHub repository](https://github.com/thegreatforge/gokit).
 
-## License
-
-This project is licensed under the [MIT License](LICENSE). Feel free to use, modify, and distribute it according to the terms of the license.
-
 ---
 
 If you encounter any problems or need assistance, please don't hesitate to reach out by opening an issue on the [GitHub repository](https://github.com/thegreatforge/gokit).
