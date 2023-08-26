@@ -16,8 +16,6 @@ func getClientConfig(host string, timeout, retryInterval time.Duration) ClientCo
 	}
 	return ClientConfig{
 		Host:             host,
-		Service:          "example",
-		RemoteService:    "remote",
 		Timeout:          timeout,
 		Retries:          3,
 		RetryInterval:    retryInterval,
@@ -37,10 +35,6 @@ func TestNewClient(t *testing.T) {
 		t.Errorf("Expected client's host to be '%s', but got '%s'", config.Host, client.host)
 	}
 
-	if client.remoteService != config.RemoteService {
-		t.Errorf("Expected client's remoteService to be '%s', but got '%s'", config.RemoteService, client.remoteService)
-	}
-
 	if client.retries != config.Retries {
 		t.Errorf("Expected client's retries to be %d, but got %d", config.Retries, client.retries)
 	}
@@ -56,11 +50,12 @@ func TestRegisterClient(t *testing.T) {
 	// Create a new client
 	client := NewClient(config)
 
-	RegisterClient(client)
+	err := RegisterClient("example", client)
 
-	if _, exists := Clients[config.Service]; !exists {
-		t.Errorf("Expected client's service to be '%s', but got '%s'", config.Service, client.service)
+	if err != nil {
+		t.Errorf("Expected no error, but got '%s'", err.Error())
 	}
+
 	Clients = make(map[string]*Client)
 }
 
