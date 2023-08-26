@@ -20,14 +20,13 @@ var Clients map[string]*Client
 // Client is a HTTP client with retry and timeout support
 type Client struct {
 	client           *http.Client
+	defaultHeaders   map[string]string
 	retries          int
 	retryInterval    time.Duration
 	host             string
-	service          string
-	remoteService    string
-	logger           *zap.Logger
 	onRetry          OnRetryHook
 	onClientResponse OnClientResponseHook
+	logger           *zap.Logger
 }
 
 func init() {
@@ -36,8 +35,6 @@ func init() {
 
 // ClientConfig is the configuration for the HTTP client
 // Host: the host of the service
-// Service: the name of the service
-// RemoteService: the name of the remote service
 // Timeout: the timeout for the HTTP request
 // Retries: the number of retries for the HTTP request
 // RetryInterval: the interval between retries
@@ -46,14 +43,13 @@ func init() {
 // OnClientResponse: the hook to be called on client response
 type ClientConfig struct {
 	Host             string
-	Service          string
-	RemoteService    string
+	DefaultHeaders   map[string]string
 	Timeout          time.Duration
 	Retries          int
 	RetryInterval    time.Duration
-	Logger           *zap.Logger
 	OnRetry          OnRetryHook
 	OnClientResponse OnClientResponseHook
+	Logger           *zap.Logger
 }
 
 // NewClient creates a new HTTP client with the given configuration
@@ -67,19 +63,22 @@ func NewClient(config ClientConfig) *Client {
 		retries:          config.Retries,
 		retryInterval:    config.RetryInterval,
 		host:             config.Host,
-		service:          config.Service,
-		remoteService:    config.RemoteService,
-		logger:           config.Logger,
+		defaultHeaders:   config.DefaultHeaders,
 		onRetry:          config.OnRetry,
 		onClientResponse: config.OnClientResponse,
+		logger:           config.Logger,
 	}
 	return hcli
 }
 
 // RegisterClient registers a new HTTP client to global map
-func RegisterClient(cli *Client) {
-	Clients[cli.service] = cli
-	cli.logger.Sugar().Infof("registered new http client for service %s", cli.service)
+func RegisterClient(clientName string, cli *Client) error {
+	_, ok := Clients[clientName]
+	if ok {
+		return fmt.Errorf("client %s already registered", clientName)
+	}
+	Clients[clientName] = cli
+	return nil
 }
 
 // getRequestId returns the request id from the context
@@ -159,12 +158,20 @@ func (c *Client) makeHttpRequestWithRetries(
 
 	for i := 0; i <= c.retries; i++ {
 
+		// create the request
 		httpReq, err := http.NewRequestWithContext(httpCtx, httpMethod, c.host+req.Path, reqBody)
 		if err != nil {
 			return fmt.Errorf("error creating request: %s", err)
 		}
+
+		// set the headers
+		if c.defaultHeaders != nil {
+			for k, v := range c.defaultHeaders {
+				httpReq.Header.Set(k, v)
+			}
+		}
+
 		httpReq.Header.Set(XRequestIdHeaderKey, requestId)
-		httpReq.Header.Set(RemoteServiceHeaderKey, c.remoteService)
 		httpReq.Header.Set("Content-Type", "application/json")
 		for k, v := range req.Headers {
 			httpReq.Header.Set(k, v)
@@ -177,14 +184,16 @@ func (c *Client) makeHttpRequestWithRetries(
 		}
 		latency := time.Since(startTime)
 
+		// execute the onClientResponse hook
 		if c.onClientResponse != nil {
-			err = c.onClientResponse(c.remoteService, req.Path, httpMethod, httpResp.StatusCode, latency)
+			err = c.onClientResponse(req.Path, httpMethod, httpResp.StatusCode, latency)
 			if err != nil {
 				c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("request failed with error: %s", err)
 			}
 		}
 
 		if httpResp != nil {
+			// success
 			if httpResp.StatusCode >= 200 && httpResp.StatusCode < 400 {
 
 				if resp != nil {
@@ -207,14 +216,14 @@ func (c *Client) makeHttpRequestWithRetries(
 
 				return nil
 
-			} else {
-				c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("request failed with status %d", httpResp.StatusCode)
 			}
+			// failure
+			c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("request failed with status %d", httpResp.StatusCode)
 		}
 
 		if i != c.retries {
 			if c.onRetry != nil {
-				err = c.onRetry(c.remoteService, req.Path, httpMethod)
+				err = c.onRetry(req.Path, httpMethod)
 				if err != nil {
 					c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("error executing onRetry hook: %s", err)
 				}
