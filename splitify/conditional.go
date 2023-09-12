@@ -1,7 +1,7 @@
 package splitify
 
 type ConditionalSplit struct {
-	rules          []*RuleConfig
+	rules          []*Rule
 	defaultHandler Handler
 }
 
@@ -11,7 +11,7 @@ func NewConditionalSplit(defaultHandler Handler) ISplitify {
 	}
 }
 
-func (c *ConditionalSplit) AddRule(rule *RuleConfig) error {
+func (c *ConditionalSplit) AddRule(rule *Rule) error {
 	if rule.Conditions == nil {
 		return ErrNoConditions
 	}

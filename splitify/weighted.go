@@ -3,7 +3,7 @@ package splitify
 import "sync"
 
 type WeightedSplit struct {
-	rules         []*RuleConfig
+	rules         []*Rule
 	rulesCount    int
 	gcd           int
 	maxWeight     int
@@ -16,7 +16,7 @@ func NewWeightedSplit() ISplitify {
 	return &WeightedSplit{}
 }
 
-func (w *WeightedSplit) AddRule(rule *RuleConfig) error {
+func (w *WeightedSplit) AddRule(rule *Rule) error {
 	if rule.Weight > 0 {
 		if w.gcd == 0 {
 			w.gcd = rule.Weight
