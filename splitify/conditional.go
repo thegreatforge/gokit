@@ -5,7 +5,7 @@ type ConditionalSplit struct {
 	defaultHandler Handler
 }
 
-func NewConditionalSplit(defaultHandler Handler) ISplitify {
+func NewConditionalSplit(defaultHandler Handler) *ConditionalSplit {
 	return &ConditionalSplit{
 		defaultHandler: defaultHandler,
 	}
@@ -24,13 +24,13 @@ func (c *ConditionalSplit) RemoveAllRules() error {
 	return nil
 }
 
-func (c *ConditionalSplit) Next() (Handler, error) {
+func (c *ConditionalSplit) Next(arg interface{}) (Handler, error) {
 	if c.rules == nil {
 		return nil, ErrNoRules
 	}
 	for _, rule := range c.rules {
 		for _, condition := range rule.Conditions {
-			if ok, err := condition(); err != nil {
+			if ok, err := condition(arg); err != nil {
 				return c.defaultHandler, err
 			} else if ok {
 				return rule.Handler, nil

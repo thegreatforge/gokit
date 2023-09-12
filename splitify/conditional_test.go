@@ -1,31 +1,55 @@
 package splitify
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestConditional_Next(t *testing.T) {
 	c := NewConditionalSplit("default")
 
+	splitterConditionofA := func(arg interface{}) (bool, error) {
+		b, ok := arg.(bool)
+		if !ok {
+			t.Fatal("invalid argument")
+			return false, errors.New("invalid argument")
+		}
+		if b {
+			return true, nil
+		}
+		return false, nil
+	}
+
+	splitterConditionofB := func(arg interface{}) (bool, error) {
+		b, ok := arg.(bool)
+		if !ok {
+			t.Fatal("invalid argument")
+			return false, errors.New("invalid argument")
+		}
+		if b {
+			return false, nil
+		}
+		return true, nil
+	}
+
 	c.AddRule(&Rule{
 		Handler: "a",
 		Conditions: []Condition{
-			func() (bool, error) {
-				return true, nil
-			},
+			splitterConditionofA,
 		},
 	})
 
 	c.AddRule(&Rule{
 		Handler: "b",
 		Conditions: []Condition{
-			func() (bool, error) {
-				return false, nil
-			},
+			splitterConditionofB,
 		},
 	})
 
+	x := true
 	resp := make([]string, 10)
 	for i := 0; i < 10; i++ {
-		h, err := c.Next()
+		h, err := c.Next(x)
 		if err != nil {
 			t.Fatal(err)
 		}

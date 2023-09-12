@@ -96,7 +96,8 @@ splitter.AddRule(rule2)
 4. Retrieve the next handler based on the satisfied conditions:
 
 ```go
-handler, err := splitter.Next()
+splitterArg := argumentOfCondition
+handler, err := splitter.Next(splitterArg)
 if err != nil {
     // Handle the error
 } else {
