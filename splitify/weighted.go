@@ -12,7 +12,7 @@ type WeightedSplit struct {
 	mutex         sync.Mutex
 }
 
-func NewWeightedSplit() ISplitify {
+func NewWeightedSplit() *WeightedSplit {
 	return &WeightedSplit{}
 }
 
