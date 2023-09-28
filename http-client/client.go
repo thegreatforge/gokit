@@ -149,14 +149,14 @@ func (c *Client) makeHttpRequestWithRetries(
 	var reqBody io.Reader
 	var err error
 
-	if httpMethod == http.MethodPut || httpMethod == http.MethodPost || httpMethod == http.MethodPatch {
-		reqBody, err = prepareRequestBody(req.Body)
-		if err != nil {
-			return fmt.Errorf("error preparing request body: %s", err)
-		}
-	}
-
 	for i := 0; i <= c.retries; i++ {
+
+		if httpMethod == http.MethodPut || httpMethod == http.MethodPost || httpMethod == http.MethodPatch {
+			reqBody, err = prepareRequestBody(req.Body)
+			if err != nil {
+				return fmt.Errorf("error preparing request body: %s", err)
+			}
+		}
 
 		// create the request
 		httpReq, err := http.NewRequestWithContext(httpCtx, httpMethod, c.host+req.Path, reqBody)
