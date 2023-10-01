@@ -3,40 +3,18 @@ package logger
 import (
 	"context"
 
-	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/metadata"
 )
+
+func DefaultLogger() *Logger {
+	return defaultLogger
+}
 
 func DefaultZapLogger() *zap.Logger {
 	return defaultLogger.zapLogger
 }
 
-// WithRequestId fetches GIN_REQUEST_ID_HEADER header from gin request
-// or GRPC_REQUEST_ID_HEADER header from grpc request and add it as field
-func (logger *Logger) WithRequestId(ctx context.Context) *Logger {
-
-	if ctx == nil {
-		return logger.WithField(REQUEST_ID_HEADER, "")
-	}
-
-	if ginCtx, ok := ctx.(*gin.Context); ok {
-		if ginCtx.Request.Header.Get(REQUEST_ID_HEADER) != "" {
-			return logger.WithField(REQUEST_ID_HEADER, ginCtx.Request.Header.Get(REQUEST_ID_HEADER))
-		}
-	}
-
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok {
-		if len(md.Get(REQUEST_ID_HEADER)) > 0 {
-			return logger.WithField(REQUEST_ID_HEADER, md.Get(REQUEST_ID_HEADER)[0])
-		}
-	}
-
-	return logger.WithField(REQUEST_ID_HEADER, "")
-}
-
-// WithError adds an error as single field to the Entry.
+// WithContext adds an error as single field to the Entry.
 func (logger *Logger) WithError(err error) *Logger {
 	return &Logger{
 		zapLogger: logger.zapLogger.With(zap.Error(err)),
@@ -54,30 +32,6 @@ func (logger *Logger) WithField(key string, value interface{}) *Logger {
 		zapLogger: logger.zapLogger.Sugar().With(key, value).Desugar(),
 		level:     logger.level,
 	}
-}
-
-// WithRequestId fetches GIN_REQUEST_ID_HEADER header from gin request
-// or GRPC_REQUEST_ID_HEADER header from grpc request and add it as field
-func WithRequestId(ctx context.Context) *Logger {
-
-	if ctx == nil {
-		return defaultLogger.WithField(REQUEST_ID_HEADER, "")
-	}
-
-	if ginCtx, ok := ctx.(*gin.Context); ok {
-		if ginCtx.Request.Header.Get(REQUEST_ID_HEADER) != "" {
-			return defaultLogger.WithField(REQUEST_ID_HEADER, ginCtx.Request.Header.Get(REQUEST_ID_HEADER))
-		}
-	}
-
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok {
-		if len(md.Get(REQUEST_ID_HEADER)) > 0 {
-			return defaultLogger.WithField(REQUEST_ID_HEADER, md.Get(REQUEST_ID_HEADER)[0])
-		}
-	}
-
-	return defaultLogger.WithField(REQUEST_ID_HEADER, "")
 }
 
 // WithField creates an entry from the standard logger and adds a field to
@@ -349,4 +303,13 @@ func Panicln(args ...interface{}) {
 // Panicln logs a message at PANIC level using the given logger
 func (logger *Logger) Panicln(args ...interface{}) {
 	logger.zapLogger.Sugar().Panic(args...)
+}
+
+// WithContextFields logs messages with the fields added to the context
+func WithContextFields(ctx context.Context) *Logger {
+	var fields []Field
+	if f, ok := ctx.Value(LoggerCtxFieldsKey).([]Field); ok {
+		fields = f
+	}
+	return defaultLogger.With(fields...)
 }
