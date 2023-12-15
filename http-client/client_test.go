@@ -15,13 +15,11 @@ func getClientConfig(host string, timeout, retryInterval time.Duration) ClientCo
 		host = "http://example.com"
 	}
 	return ClientConfig{
-		Host:             host,
-		Timeout:          timeout,
-		Retries:          3,
-		RetryInterval:    retryInterval,
-		Logger:           zap.NewNop(),
-		OnRetry:          nil,
-		OnClientResponse: nil,
+		Host:          host,
+		Timeout:       timeout,
+		Retries:       3,
+		RetryInterval: retryInterval,
+		Logger:        zap.NewNop(),
 	}
 }
 
