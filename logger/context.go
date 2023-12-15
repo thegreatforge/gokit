@@ -32,3 +32,15 @@ func AppendFieldsToContext(ctx context.Context, fields ...Field) context.Context
 	}
 	return context.WithValue(ctx, LoggerCtxFieldsKey, newLogFields)
 }
+
+// GetFieldValueFromContext returns the string value from the context
+func GetFieldValueFromContext(ctx context.Context, FieldName string) string {
+	if f, ok := ctx.Value(LoggerCtxFieldsKey).([]Field); ok {
+		for _, field := range f {
+			if field.Key == FieldName {
+				return field.String
+			}
+		}
+	}
+	return ""
+}
