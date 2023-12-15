@@ -30,8 +30,6 @@ func main() {
         Retries:          3,
         RetryInterval:    2 * time.Second,
         Logger:           yourLogger, // Replace with your zap logger instance
-        OnRetry:          yourRetryHook, // For retry metrics
-        OnClientResponse: yourResponseHook, // For every client response metrics
     }
 
     client := httpclient.NewClient(config)
@@ -85,8 +83,6 @@ func main() {
 		Retries:          3,
 		RetryInterval:    5 * time.Second,
 		Logger:           zap.NewNop(),
-		OnRetry:          nil,
-		OnClientResponse: nil,
 	}
 
 	// create new client and register it to global variable
@@ -117,4 +113,4 @@ func main() {
 
 ## Closing Thoughts
 
-The `httpclient` package simplifies the process of making HTTP requests with retry and timeout support. By providing an intuitive API and customizable hooks, it aims to improve the reliability of HTTP communication in your Go applications.
+The `httpclient` package simplifies the process of making HTTP requests with retry and timeout support. By providing an intuitive API, it aims to improve the reliability of HTTP communication in your Go applications.

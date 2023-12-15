@@ -19,14 +19,12 @@ var Clients map[string]*Client
 
 // Client is a HTTP client with retry and timeout support
 type Client struct {
-	client           *http.Client
-	defaultHeaders   map[string]string
-	retries          int
-	retryInterval    time.Duration
-	host             string
-	onRetry          OnRetryHook
-	onClientResponse OnClientResponseHook
-	logger           *zap.Logger
+	client         *http.Client
+	defaultHeaders map[string]string
+	retries        int
+	retryInterval  time.Duration
+	host           string
+	logger         *zap.Logger
 }
 
 func init() {
@@ -39,17 +37,13 @@ func init() {
 // Retries: the number of retries for the HTTP request
 // RetryInterval: the interval between retries
 // Logger: the logger
-// OnRetry: the hook to be called on retry
-// OnClientResponse: the hook to be called on client response
 type ClientConfig struct {
-	Host             string
-	DefaultHeaders   map[string]string
-	Timeout          time.Duration
-	Retries          int
-	RetryInterval    time.Duration
-	OnRetry          OnRetryHook
-	OnClientResponse OnClientResponseHook
-	Logger           *zap.Logger
+	Host           string
+	DefaultHeaders map[string]string
+	Timeout        time.Duration
+	Retries        int
+	RetryInterval  time.Duration
+	Logger         *zap.Logger
 }
 
 // NewClient creates a new HTTP client with the given configuration
@@ -60,13 +54,11 @@ func NewClient(config ClientConfig) *Client {
 		client: &http.Client{
 			Timeout: config.Timeout,
 		},
-		retries:          config.Retries,
-		retryInterval:    config.RetryInterval,
-		host:             config.Host,
-		defaultHeaders:   config.DefaultHeaders,
-		onRetry:          config.OnRetry,
-		onClientResponse: config.OnClientResponse,
-		logger:           config.Logger,
+		retries:        config.Retries,
+		retryInterval:  config.RetryInterval,
+		host:           config.Host,
+		defaultHeaders: config.DefaultHeaders,
+		logger:         config.Logger,
 	}
 	return hcli
 }
@@ -79,6 +71,15 @@ func RegisterClient(clientName string, cli *Client) error {
 	}
 	Clients[clientName] = cli
 	return nil
+}
+
+// GetClient returns the HTTP client with the given name
+func GetClient(clientName string) (*Client, error) {
+	cli, ok := Clients[clientName]
+	if !ok {
+		return nil, fmt.Errorf("client %s not found", clientName)
+	}
+	return cli, nil
 }
 
 // getRequestId returns the request id from the context
@@ -133,6 +134,14 @@ func overrideTimeOut(ctx context.Context, timeout time.Duration) (context.Contex
 	return ctx, func() {}
 }
 
+func (c *Client) executeHttpRequest(ctx context.Context, req *http.Request) (*http.Response, error) {
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
 // makeHttpRequestWithRetries makes the HTTP request with retries
 func (c *Client) makeHttpRequestWithRetries(
 	ctx context.Context,
@@ -177,22 +186,13 @@ func (c *Client) makeHttpRequestWithRetries(
 			httpReq.Header.Set(k, v)
 		}
 
-		startTime := time.Now()
-		httpResp, err := c.client.Do(httpReq)
+		httpResp, err := c.executeHttpRequest(httpCtx, httpReq)
 		if err != nil {
 			c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("request failed with error: %s", err)
 		}
-		latency := time.Since(startTime)
-
-		// execute the onClientResponse hook
-		if c.onClientResponse != nil {
-			err = c.onClientResponse(req.Path, httpMethod, httpResp.StatusCode, latency)
-			if err != nil {
-				c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("request failed with error: %s", err)
-			}
-		}
 
 		if httpResp != nil {
+
 			// success
 			if httpResp.StatusCode >= 200 && httpResp.StatusCode < 400 {
 
@@ -222,12 +222,6 @@ func (c *Client) makeHttpRequestWithRetries(
 		}
 
 		if i != c.retries {
-			if c.onRetry != nil {
-				err = c.onRetry(req.Path, httpMethod)
-				if err != nil {
-					c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Errorf("error executing onRetry hook: %s", err)
-				}
-			}
 			c.logger.Sugar().With(XRequestIdHeaderKey, requestId).Warnf("retrying in %s...", c.retryInterval)
 			time.Sleep(c.retryInterval)
 		}
